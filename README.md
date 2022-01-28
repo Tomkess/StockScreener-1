@@ -1,2 +1,2 @@
 # Stock-Screener
-Simple S&amp;P 500 screening with momentum and random forest algorithms
+S&amp;P 500 stock screener utilizing Yahoo Finance API and simple momentum/random forest algorithms.
