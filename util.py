@@ -1,13 +1,12 @@
 import pandas as pd
 import pickle
 
-def pickle_obj(df):
-    pickle_out = open('dict.pickle', 'wb')
-    pickle.dump(df, pickle_out)
-    pickle_out.close()
+def pickle_obj(obj):
+    with open('dict.pickle', 'wb') as f:
+        pickle.dump(obj, f)
     
-def pickle_get():
-    pickle_in = open('dict.pickle', 'rb')
+def pickle_get(name):
+    pickle_in = open(f'{name}.pickle', 'rb')
     return pickle.load(pickle_in)
 
 def get_sp500_companies():

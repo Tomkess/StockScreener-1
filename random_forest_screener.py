@@ -97,6 +97,8 @@ for i in range(len(symbols)):
     print(symbols[i])
     
 print(time() - t0);
+
+
     
 
 
