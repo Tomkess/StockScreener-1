@@ -2,7 +2,10 @@ import pandas as pd
 import numpy as np
 import yfinance as yf
 from sklearn.ensemble import RandomForestRegressor
-from util import pickle_obj, get_sp500_companies
+from util import pickle_obj, pickle_get, get_sp500_companies
+from time import time
+from bs4 import BeautifulSoup
+from requests import get
 
 
 """
@@ -30,14 +33,14 @@ yfinance_statistics = {
 the_fundamentals = list(yfinance_statistics.keys())
 
 
-def train_classifier(fundamentals):
+def train_classifier():
     """
     Returns random forest regressor trained with historical fundamentals data 
     courtesy of github.com/robertmartin8
     
-    This is specifically going to apply random forest as a regression technique
+    This is going to apply random forest as a regression technique
     as opposed to classification. The regressor will attempt to predict returns
-    instead of identifying "success" or "failure" relative to the S&P 500
+    rather than identifying "success" or "failure" relative to the S&P 500
     """
     
     fundamentals = the_fundamentals
@@ -66,7 +69,6 @@ def train_classifier(fundamentals):
     
     return regressor
 
-
 symbols = get_sp500_companies()
 
 the_columns = [
@@ -76,20 +78,26 @@ the_columns = [
     'Predicted Relative Returns'
     ]
 
-df = pd.DataFrame(the_columns + the_fundamentals)
+all_stats = the_columns + the_fundamentals;
 
-for symbol in symbols:
-    ticker = yf.Ticker(symbol)
+df = pd.DataFrame(columns = all_stats)
+
+t0 = time();
+
+for i in range(len(symbols)):
+    ticker = yf.Ticker(symbols[i])
     info = ticker.info
     
-    
-    stock_fundamentals = [symbol, 'N/A', \
-                          info['regularMarketPrice'], 'N/A']
-    for fund in the_fundamentals:
-        stock_fundamentals.append(info[yfinance_statistics[fund]])
+    df.loc[i, 'Symbol':'Predicted Relative Returns'] = [symbols[i], 'N/A', \
+                                                        info['regularMarketPrice'], 'N/A']
         
-    print(symbol)
-
+    for fund in the_fundamentals:
+        df.loc[i, fund] = info[yfinance_statistics[fund]]
+    
+    print(symbols[i])
+    
+print(time() - t0);
+    
 
 
 

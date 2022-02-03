@@ -40,7 +40,7 @@ def get_all_returns(symbol, periods):
     """Returns price returns for a specific ticker across all fields"""
     
     try:
-        # Using prices at 'Open' rather than 'Adj Close' which is a common practice
+        # Using prices at 'Open' rather than 'Adj Close' which is also common
         returns = []
         ticker_prices = yf.Ticker(symbol).history(period = periods[0])['Open']
         price = ticker_prices[-1]; returns.append(price)
@@ -76,7 +76,7 @@ def get_momentum_data(periods = ['1Y', '6M', '3M']):
         
     df = pd.DataFrame(columns = the_columns)
     
-    # i = 0, testing purposes
+    i = 0 # testing purposes
     for symbol in symbols:
         # Break statement for testing purposes
         """
@@ -98,7 +98,8 @@ def get_momentum_data(periods = ['1Y', '6M', '3M']):
         # Print statement to ensure things are actually working
         # Also, it's incredibly boring to wait for the dataframe to fill
         # while nothing happens on your screen
-        print(symbol, i); i += 1
+        print(symbol, i); 
+        i += 1
         
     return df
 
@@ -127,7 +128,7 @@ def get_winners(df, n = 50, periods = ['1Y', '6M', '3M']):
     return df
 
 
-# Point of inquiry: what is the best portfolio weighting strategy?
+# What is the best portfolio weighting strategy?
 def num_shares(winners, portfolio_value):
     """Calculates number of shares/ticker for an even-weighted portfolio"""
     
@@ -140,10 +141,10 @@ def num_shares(winners, portfolio_value):
 
 
 df = get_momentum_data()
-winners = get_winners(df, n = 50)
-winners = num_shares(winners, 1e6)
 
+# winners = get_winners(df, n = 50)
+# winners = num_shares(winners, 1e6)
 # winners.to_excel('momentum t50')
 
-pickle_obj(winners)
+# pickle_obj(winners)
 
