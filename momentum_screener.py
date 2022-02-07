@@ -29,8 +29,8 @@ def get_index(period, length):
     dict = {
         '1Y': 0,
         '6M': int(length/2),
-        '3M': length - int(length/4),
-        '1M': length - int(length/12)
+        '3M': 3 * int(length/4),
+        '1M': 11 * int(length/12)
         }
     
     return dict[period]

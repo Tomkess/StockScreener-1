@@ -69,34 +69,42 @@ def train_classifier():
     
     return regressor
 
-symbols = get_sp500_companies()
 
-the_columns = [
-    'Symbol', 
-    'Number of Shares to Buy',
-    'Price',
-    'Predicted Relative Returns'
-    ]
-
-all_stats = the_columns + the_fundamentals;
-
-df = pd.DataFrame(columns = all_stats)
-
-t0 = time();
-
-for i in range(len(symbols)):
-    ticker = yf.Ticker(symbols[i])
-    info = ticker.info
+def get_current_data(n):
+    """
+    Returns dataframe with current fundamentals data of the first n companies in
+    get_sp500_companies(). Yfinance is extremely slow for this type of request,
+    currently working on alternative using beautiful soup to parse 
+    finance.yahoo.com.
+    """
     
-    df.loc[i, 'Symbol':'Predicted Relative Returns'] = [symbols[i], 'N/A', \
-                                                        info['regularMarketPrice'], 'N/A']
+    symbols = get_sp500_companies()
+    
+    the_columns = [
+        'Symbol', 
+        'Number of Shares to Buy',
+        'Price',
+        'Predicted Relative Returns'
+        ]
+    
+    all_stats = the_columns + the_fundamentals;
+    
+    df = pd.DataFrame(columns = all_stats)
+    for i in range(n):
+        ticker = yf.Ticker(symbols[i])
+        info = ticker.info
         
-    for fund in the_fundamentals:
-        df.loc[i, fund] = info[yfinance_statistics[fund]]
+        df.loc[i, 'Symbol':'Predicted Relative Returns'] = [symbols[i], 'N/A', \
+                                                            info['regularMarketPrice'], 'N/A']
+            
+        for fund in the_fundamentals:
+            try:
+                df.loc[i, fund] = info[yfinance_statistics[fund]]
+            except KeyError:
+                df.loc[i, fund] = 'N/A'
+        
+        print(symbols[i])
     
-    print(symbols[i])
-    
-print(time() - t0);
 
 
     
