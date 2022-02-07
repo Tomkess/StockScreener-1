@@ -42,8 +42,6 @@ def train_classifier():
     as opposed to classification. The regressor will attempt to predict returns
     rather than identifying "success" or "failure" relative to the S&P 500
     """
-    
-    fundamentals = the_fundamentals
 
     p_changes = [
         'stock_p_change',
@@ -55,11 +53,11 @@ def train_classifier():
 
     # Removes rows from df that contain 'N/A' or 'nan'
     # Cuts data from ~8700 rows to ~6800
-    df_clean = df[fundamentals + p_changes].dropna(how = "any").astype(np.float32)
+    df_clean = df[the_fundamentals + p_changes].dropna(how = "any").astype(np.float32)
 
     # Working on solution with better space complexity, but at least it's constant
     # This is a simple solution that keeps the features and labels sets the same size
-    training_features = df_clean[fundamentals]
+    training_features = df_clean[the_fundamentals]
     training_labels = df_clean['stock_p_change'] - df_clean['SP500_p_change']
 
     # Using default parameters and low estimator count for now
