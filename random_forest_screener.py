@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import yfinance as yf
 from sklearn.ensemble import RandomForestRegressor
-from util import pickle_obj, pickle_get, get_sp500_companies
+import util
 from time import time
 from bs4 import BeautifulSoup
 from requests import get
@@ -21,8 +21,8 @@ To access use df[6:]
 yfinance_statistics = {
     'Market Cap': 'marketCap', 
     'Enterprise Value': 'enterpriseValue', 
-    'Trailing PE': 'trailingPE', 
-    'Forward PE': 'forwardPE', 
+    'Trailing P/E': 'trailingPE', 
+    'Forward P/E': 'forwardPE', 
     'PEG Ratio': 'pegRatio', 
     'Price/Sales': 'priceToSalesTrailing12Months', 
     'Price/Book': 'priceToBook', 
@@ -33,14 +33,20 @@ yfinance_statistics = {
 the_fundamentals = list(yfinance_statistics.keys())
 
 
+# Refactor to allow training feature types and regressor parameters to be set by user
+# Bad practice to hard code the list of fundamentals...
 def train_classifier():
     """
     Returns random forest regressor trained with historical fundamentals data 
     courtesy of github.com/robertmartin8
     
-    This is going to apply random forest as a regression technique
-    as opposed to classification. The regressor will attempt to predict returns
-    rather than identifying "success" or "failure" relative to the S&P 500
+    The random forest regressor will attempt to predict returns relative to 
+    the S&P 500. It is also a common method to use a machine learning "classifier"
+    to determine whether a stock will outperform the benchmark by a certain
+    standard
+    
+    For the sake of symmetry to the momentum screener, I want to rank the stocks
+    by their predicted returns so I'm doing regression rather than classification.
     """
 
     p_changes = [
@@ -49,26 +55,26 @@ def train_classifier():
         ]
 
     url = 'https://raw.githubusercontent.com/robertmartin8/MachineLearningStocks/master/keystats.csv'
-    df = pd.read_csv(url)
+    df = pd.read_csv(url, index_col='Date')
 
     # Removes rows from df that contain 'N/A' or 'nan'
     # Cuts data from ~8700 rows to ~6800
-    df_clean = df[the_fundamentals + p_changes].dropna(how = "any").astype(np.float32)
+    df = df[the_fundamentals + p_changes].dropna(how = "any").astype(np.float32)
 
     # Working on solution with better space complexity, but at least it's constant
     # This is a simple solution that keeps the features and labels sets the same size
-    training_features = df_clean[the_fundamentals]
-    training_labels = df_clean['stock_p_change'] - df_clean['SP500_p_change']
+    training_features = df[the_fundamentals].values
+    training_labels = (df['stock_p_change'] - df['SP500_p_change']).tolist()
 
     # Using default parameters and low estimator count for now
     # Using constant random_state seed so that results are consistent across trials
-    regressor = RandomForestRegressor(n_estimators = 10, random_state = 0)
+    regressor = RandomForestRegressor(n_estimators = 100, random_state = 0)
     regressor.fit(training_features, training_labels)
     
     return regressor
 
 
-def get_current_data(n):
+def get_current_data(n = 500):
     """
     Returns dataframe with current fundamentals data of the first n companies in
     get_sp500_companies(). Yfinance is extremely slow for this type of request,
@@ -76,7 +82,7 @@ def get_current_data(n):
     finance.yahoo.com.
     """
     
-    symbols = get_sp500_companies()
+    symbols = util.get_sp500_companies()
     
     the_columns = [
         'Symbol', 
@@ -102,7 +108,34 @@ def get_current_data(n):
                 df.loc[i, fund] = 'N/A'
         
         print(symbols[i])
+        
+    return df;
+
+
+
+def predict_returns(df, regressor, n = 10):
+    """Propogates dataframe with predicted returns then returns top n"""
     
+    for i in range(len(df)):
+        # Messy prediction method, need to review sklearn docs...
+        df.loc[i, 'Predicted Relative Returns'] = regressor.predict(\
+                            [df.loc[i, 'Market Cap':].values])[0]
+            
+    df = df.sort_values(by = 'Predicted Relative Returns', ascending = False)[:n]
+    
+    return df
+        
+        
+"""
+TESTING
+
+df = util.pickle_get()
+reg = train_classifier()
+df = predict_returns(df, reg, 5)
+df = util.num_shares(df, 1000)
+"""
+
+
 
 
     

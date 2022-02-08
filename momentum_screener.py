@@ -2,7 +2,7 @@ import pandas as pd
 import yfinance as yf
 from scipy import stats
 import math
-from util import pickle_obj, get_sp500_companies
+import util
 
 
 # Yahoo Finance API breaks for period = '1y'...
@@ -59,7 +59,7 @@ def get_all_returns(symbol, periods):
 def get_momentum_data(periods = ['1Y', '6M', '3M']):
     """Propogates dataframe w/ momentum data of all stocks"""
     
-    symbols = get_sp500_companies()
+    symbols = util.get_sp500_companies()
 
     # Creating output dataframe
     the_columns = [
@@ -140,11 +140,12 @@ def num_shares(winners, portfolio_value):
     return winners
 
 
+"""
 df = get_momentum_data()
 
-# winners = get_winners(df, n = 50)
-# winners = num_shares(winners, 1e6)
-# winners.to_excel('momentum t50')
-
-# pickle_obj(winners)
+winners = get_winners(df, n = 50)
+winners = num_shares(winners, 1e6)
+winners.to_excel('momentum t50')
+pickle_obj(winners)
+"""
 
