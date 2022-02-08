@@ -112,7 +112,6 @@ def get_current_data(n = 500):
     return df;
 
 
-
 def predict_returns(df, regressor, n = 10):
     """Propogates dataframe with predicted returns then returns top n"""
     
