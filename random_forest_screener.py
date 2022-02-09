@@ -2,10 +2,10 @@ import pandas as pd
 import numpy as np
 import yfinance as yf
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
 import util
 from time import time
-from bs4 import BeautifulSoup
-from requests import get
+import threading
 
 
 """
@@ -32,6 +32,42 @@ yfinance_statistics = {
 
 the_fundamentals = list(yfinance_statistics.keys())
 
+p_changes = [
+    'stock_p_change',
+    'SP500_p_change'
+    ]
+
+
+def query_to_df(ticker_list, dfs, the_columns):
+    """Helper function to propogate dataframe with threading"""
+    
+    df = pd.DataFrame(columns = the_columns)
+    
+    for i in range(len(ticker_list)):
+        ticker = yf.Ticker(ticker_list[i])
+        info = ticker.info
+        
+        ser = [ticker_list[i], 'N/A', info['regularMarketPrice'], 'N/A']
+        for fund in the_fundamentals:
+            try:
+                ser.append(info[yfinance_statistics[fund]])
+            except KeyError:
+                ser.append('N/A')
+                
+        df = df.append(pd.Series(ser, index = the_columns), ignore_index = True)
+        print(ticker_list[i], i)
+        
+    dfs.append(df)
+        
+    return dfs
+
+
+def partition(lst, n):
+    """Partitions a list into n-sized portions"""
+    
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
+
 
 # Refactor to allow training feature types and regressor parameters to be set by user
 # Bad practice to hard code the list of fundamentals...
@@ -48,11 +84,6 @@ def train_classifier():
     For the sake of symmetry to the momentum screener, I want to rank the stocks
     by their predicted returns so I'm doing regression rather than classification.
     """
-
-    p_changes = [
-        'stock_p_change',
-        'SP500_p_change'
-        ]
 
     url = 'https://raw.githubusercontent.com/robertmartin8/MachineLearningStocks/master/keystats.csv'
     df = pd.read_csv(url, index_col='Date')
@@ -74,7 +105,7 @@ def train_classifier():
     return regressor
 
 
-def get_current_data(n = 500):
+def get_current_data():
     """
     Returns dataframe with current fundamentals data of the first n companies in
     get_sp500_companies(). Yfinance is extremely slow for this type of request,
@@ -89,17 +120,29 @@ def get_current_data(n = 500):
         'Number of Shares to Buy',
         'Price',
         'Predicted Relative Returns'
-        ]
+        ] + the_fundamentals
+
+    dfs = []
+    threads = []
+    for lst in partition(symbols, 10):
+        t = threading.Thread(target=query_to_df, args=(lst, dfs, the_columns)) # Creates thread for each list
+        t.start()
+        threads.append(t)
+        
+    for t in threads:
+        t.join()
+        
+    results = pd.concat(dfs)
     
-    all_stats = the_columns + the_fundamentals;
+    """
+    In case threading breaks...
     
-    df = pd.DataFrame(columns = all_stats)
     for i in range(n):
         ticker = yf.Ticker(symbols[i])
         info = ticker.info
         
         df.loc[i, 'Symbol':'Predicted Relative Returns'] = [symbols[i], 'N/A', \
-                                                            info['regularMarketPrice'], 'N/A']
+                                            info['regularMarketPrice'], 'N/A']
             
         for fund in the_fundamentals:
             try:
@@ -108,22 +151,24 @@ def get_current_data(n = 500):
                 df.loc[i, fund] = 'N/A'
         
         print(symbols[i])
+    """
         
-    return df;
+    return results;
 
 
 def predict_returns(df, regressor, n = 10):
     """Propogates dataframe with predicted returns then returns top n"""
     
     for i in range(len(df)):
-        # Messy prediction method, need to review sklearn docs...
         df.loc[i, 'Predicted Relative Returns'] = regressor.predict(\
                             [df.loc[i, 'Market Cap':].values])[0]
             
     df = df.sort_values(by = 'Predicted Relative Returns', ascending = False)[:n]
     
     return df
-        
+
+
+df = get_current_data()
         
 """
 TESTING
