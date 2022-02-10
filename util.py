@@ -25,8 +25,8 @@ def num_shares(winners, portfolio_value):
     """Calculates number of shares/ticker for an even-weighted portfolio"""
     
     dollars_per_ticker = portfolio_value / len(winners)
-    for row in winners.index:
+    for row in range(len(winners)):
         winners.loc[row, 'Number of Shares to Buy'] = \
-            math.floor(dollars_per_ticker / winners.loc[row, 'Price'])
+            round(dollars_per_ticker / winners.loc[row, 'Price'], 2)
             
     return winners

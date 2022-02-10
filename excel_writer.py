@@ -1,8 +1,8 @@
 import pandas as pd
-from pickling import pickle_get
+from util import pickle_get
 
 
-def get_excel(df, title):
+def to_excel(df, title):
     writer = pd.ExcelWriter(f'{title}.xlsx', engine = 'xlsxwriter')
     df.to_excel(writer, title, index = False)
     
@@ -26,9 +26,9 @@ def get_excel(df, title):
         }
     )
     
-    integer_format = writer.book.add_format(
+    share_format = writer.book.add_format(
         {
-            'num_format': '0',
+            'num_format': '0.00',
             'font_color': font_color, 
             'bg_color': background_color,
             'border': 1
@@ -37,7 +37,7 @@ def get_excel(df, title):
     
     column_formats = {
     'A': ['Symbol', string_format],
-    'B': ['Number of Shares to Buy', integer_format],
+    'B': ['Number of Shares to Buy', share_format],
     'C': ['Price', dollar_format]
     }
     

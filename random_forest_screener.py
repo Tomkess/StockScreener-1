@@ -4,8 +4,9 @@ import yfinance as yf
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 import util
-from time import time
 import threading
+from excel_writer import to_excel
+from sklearn.metrics import precision_score
 
 
 """
@@ -52,7 +53,7 @@ def query_to_df(ticker_list, dfs, the_columns):
             try:
                 ser.append(info[yfinance_statistics[fund]])
             except KeyError:
-                ser.append('N/A')
+                ser.append(np.nan)
                 
         df = df.append(pd.Series(ser, index = the_columns), ignore_index = True)
         print(ticker_list[i], i)
@@ -71,7 +72,7 @@ def partition(lst, n):
 
 # Refactor to allow training feature types and regressor parameters to be set by user
 # Bad practice to hard code the list of fundamentals...
-def train_classifier():
+def train_regressor():
     """
     Returns random forest regressor trained with historical fundamentals data 
     courtesy of github.com/robertmartin8
@@ -101,6 +102,8 @@ def train_classifier():
     # Using constant random_state seed so that results are consistent across trials
     regressor = RandomForestRegressor(n_estimators = 100, random_state = 0)
     regressor.fit(training_features, training_labels)
+    
+    print("Training regressor...")
     
     return regressor
 
@@ -135,7 +138,7 @@ def get_current_data():
     results = pd.concat(dfs)
     
     """
-    In case threading breaks...
+    Old data collection method just in case...
     
     for i in range(n):
         ticker = yf.Ticker(symbols[i])
@@ -156,29 +159,101 @@ def get_current_data():
     return results;
 
 
-def predict_returns(df, regressor, n = 10):
+def predict_returns(df, regressor, n = 50):
     """Propogates dataframe with predicted returns then returns top n"""
     
-    for i in range(len(df)):
+    df.dropna(inplace = True) # Cuts out tickers with incomplete data
+    
+    for i in range(10):
         df.loc[i, 'Predicted Relative Returns'] = regressor.predict(\
-                            [df.loc[i, 'Market Cap':].values])[0]
+                                            df.loc[i, 'Market Cap':].values)
             
     df = df.sort_values(by = 'Predicted Relative Returns', ascending = False)[:n]
+    
+    new_index = np.arange(0, n)
+    df.set_index(new_index, inplace = True) # normalizes indices
+    
+    print("Predicting returns...")
     
     return df
 
 
-df = get_current_data()
+def backtest_random_forest():
+    """
+    SEVERELY OVERFITTED BACKTEST METHOD
+    GIVES EXTREMELY MISLEADING RETURNS
+    """
+
+    url = 'https://raw.githubusercontent.com/robertmartin8/MachineLearningStocks/master/keystats.csv'
+    df = pd.read_csv(url, index_col='Date')
+    
+    df.dropna(inplace = True)
+    
+    X = df[the_fundamentals].values
+    Y = (df['stock_p_change'] - df['SP500_p_change']).tolist()
+    Z = np.array(df[['stock_p_change', 'SP500_p_change', 'Ticker']])
+    
+    # Splits dataset
+    x_train, x_test, y_train, y_test, z_train, z_test = \
+        train_test_split(X, Y, Z, test_size = 0.25, shuffle = True)
+    
+    # Trains regressor with designated training partition
+    regressor = RandomForestRegressor(n_estimators = 100, random_state = 0)
+    regressor.fit(x_train, y_train)
+    
+    # Creates dictionary of returns, key = original index and value = predicted returns
+    predicted_returns = []
+    for i in range(len(x_test)):
+        predicted_returns.append([i, regressor.predict([x_test[i]])[0]])
+    
+    # Creates list of ordered tuples from dictionary sorted by predicted returns
+    # First value of each tuple corresponds to original position in unsorted list
+    sorted_predicted_returns = sorted(predicted_returns, key = lambda x:x[1], reverse = True)
+    
+    # Iterates through top 50 and compares to actual returns of z_test
+    # Averages percentage return
+    real_returns = []
+    for i in range(50):
+        winning_ticker = z_test[sorted_predicted_returns[i][0]]
+        real_returns.append(winning_ticker[0] - winning_ticker[1])
         
-"""
-TESTING
+    real_returns = reject_outliers(real_returns)
+    
+    total = 0; j = 0
+    for i in range(len(real_returns)):
+        if real_returns[i] != 0:
+            total += real_returns[i]
+            j += 1
+            
+    return total / j
+           
+    
+def reject_outliers(data, m=2):
+    """Imperfect method to nullify outliers from an array"""
+    
+    mean = np.mean(data)
+    std = np.std(data)
+    
+    for i in range(len(data)):
+        if data[i] >= (mean + 2*std) or data[i] <= (mean - 2*std):
+            data[i] = 0
+            
+    return data
 
-df = util.pickle_get()
-reg = train_classifier()
-df = predict_returns(df, reg, 5)
-df = util.num_shares(df, 1000)
+
+"""
+df = get_current_data()
+reg = train_regressor()
+
+util.pickle_obj(df)
+
+df = predict_returns(df, reg)
+df = util.num_shares(df, 100000000)
+
+to_excel(df, "Top 50 by Valuation")
 """
 
+x = backtest_random_forest()
 
 
 
