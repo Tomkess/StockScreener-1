@@ -257,5 +257,5 @@ if __name__ == '__main__':
     portfolio_value = float(input("Portfolio value: "))
     df = util.num_shares(df, portfolio_value)
     
-    to_excel(df, "Top 50 by Valuation")
+    to_excel(df, f"Top {top_n} by Valuation")
     print("Done!")

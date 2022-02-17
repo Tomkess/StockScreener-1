@@ -151,7 +151,7 @@ if __name__ == '__main__':
     portfolio_value = float(input("Portfolio value: "))
     winners = num_shares(winners, portfolio_value)
     
-    winners.to_excel('Top 50 by Momentum')
+    winners.to_excel(f'Top {top_n} by Momentum')
     print("Done!")
     
     # pickle_obj(winners)
