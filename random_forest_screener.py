@@ -85,6 +85,8 @@ def train_regressor():
     For the sake of symmetry to the momentum screener, I want to rank the stocks
     by their predicted returns so I'm doing regression rather than classification.
     """
+    
+    print("Training regressor...")
 
     url = 'https://raw.githubusercontent.com/robertmartin8/MachineLearningStocks/master/keystats.csv'
     df = pd.read_csv(url, index_col='Date')
@@ -103,18 +105,18 @@ def train_regressor():
     regressor = RandomForestRegressor(n_estimators = 100, random_state = 0)
     regressor.fit(training_features, training_labels)
     
-    print("Training regressor...")
-    
     return regressor
 
 
-def get_current_data():
+def get_current_data(nothreads = False):
     """
     Returns dataframe with current fundamentals data of the first n companies in
     get_sp500_companies(). Yfinance is extremely slow for this type of request,
     currently working on alternative using beautiful soup to parse 
     finance.yahoo.com.
     """
+    
+    print("Obtaining current data...")
     
     symbols = util.get_sp500_companies()
     
@@ -137,30 +139,32 @@ def get_current_data():
         
     results = pd.concat(dfs)
     
-    """
-    Old data collection method just in case...
-    
-    for i in range(n):
-        ticker = yf.Ticker(symbols[i])
-        info = ticker.info
+    if nothreads:
+        # Old data collection method just in case...
+        df = pd.Dataframe(the_fundamentals + p_changes)
         
-        df.loc[i, 'Symbol':'Predicted Relative Returns'] = [symbols[i], 'N/A', \
-                                            info['regularMarketPrice'], 'N/A']
+        for i in range(len(symbols)):
+            ticker = yf.Ticker(symbols[i])
+            info = ticker.info
             
-        for fund in the_fundamentals:
-            try:
-                df.loc[i, fund] = info[yfinance_statistics[fund]]
-            except KeyError:
-                df.loc[i, fund] = 'N/A'
-        
-        print(symbols[i])
-    """
+            df.loc[i, 'Symbol':'Predicted Relative Returns'] = [symbols[i], 'N/A', \
+                                                info['regularMarketPrice'], 'N/A']
+                
+            for fund in the_fundamentals:
+                try:
+                    df.loc[i, fund] = info[yfinance_statistics[fund]]
+                except KeyError:
+                    df.loc[i, fund] = 'N/A'
+            
+            print(symbols[i])
         
     return results;
 
 
 def predict_returns(df, regressor, n = 50):
     """Propogates dataframe with predicted returns then returns top n"""
+    
+    print("Predicting returns...")
     
     df.dropna(inplace = True) # Cuts out tickers with incomplete data
     
@@ -172,8 +176,6 @@ def predict_returns(df, regressor, n = 50):
     
     new_index = np.arange(0, n)
     df.set_index(new_index, inplace = True) # normalizes indices
-    
-    print("Predicting returns...")
     
     return df
 
@@ -241,32 +243,19 @@ def reject_outliers(data, m=2):
     return data
 
 
-"""
-df = get_current_data()
-reg = train_regressor()
-
-util.pickle_obj(df)
-
-df = predict_returns(df, reg)
-df = util.num_shares(df, 100000000)
-
-to_excel(df, "Top 50 by Valuation")
-"""
-
-x = backtest_random_forest()
-
-
+if __name__ == '__main__':
+    df = get_current_data()
+    reg = train_regressor()
+    
+    # util.pickle_obj(df)
+    
+    # Not worried about type checks here because it's mainly for personal use
+    top_n = int(input("# of stocks in portfolio: "))
+    df = predict_returns(df, reg, n = top_n)
 
     
-
-
-
-
-
-
-
-
-
-
-
-
+    portfolio_value = float(input("Portfolio value: "))
+    df = util.num_shares(df, portfolio_value)
+    
+    to_excel(df, "Top 50 by Valuation")
+    print("Done!")

@@ -3,6 +3,10 @@ from util import pickle_get
 
 
 def to_excel(df, title):
+    """Exports dataframe to excel file"""
+    
+    print("Exporting portfolio to excel...")
+    
     writer = pd.ExcelWriter(f'{title}.xlsx', engine = 'xlsxwriter')
     df.to_excel(writer, title, index = False)
     

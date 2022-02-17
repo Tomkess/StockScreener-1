@@ -59,6 +59,8 @@ def get_all_returns(symbol, periods):
 def get_momentum_data(periods = ['1Y', '6M', '3M']):
     """Propogates dataframe w/ momentum data of all stocks"""
     
+    print("Obtaining momentum data...")
+    
     symbols = util.get_sp500_companies()
 
     # Creating output dataframe
@@ -140,12 +142,18 @@ def num_shares(winners, portfolio_value):
     return winners
 
 
-"""
-df = get_momentum_data()
+if __name__ == '__main__':
+    df = get_momentum_data()
+    
+    top_n = int(input("# of stocks in portfolio: "))
+    winners = get_winners(df, n = top_n)
+    
+    portfolio_value = float(input("Portfolio value: "))
+    winners = num_shares(winners, portfolio_value)
+    
+    winners.to_excel('Top 50 by Momentum')
+    print("Done!")
+    
+    # pickle_obj(winners)
 
-winners = get_winners(df, n = 50)
-winners = num_shares(winners, 1e6)
-winners.to_excel('momentum t50')
-pickle_obj(winners)
-"""
 
